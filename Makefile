@@ -18,9 +18,9 @@ HOST_SYSTEM = $(shell uname | cut -f 1 -d_)
 SYSTEM ?= $(HOST_SYSTEM)
 GRPCSOURCEPATH = ${GRPC_SOURCE}
 CXX = g++
-CPPFLAGS += -I$(GRPCSOURCEPATH)third_party/protobuf/src -I. -pthread `pkg-config --cflags grpc`\
+CPPFLAGS += -I$(GRPCSOURCEPATH)third_party/protobuf/src -I$(GRPCSOURCEPATH)include -I. -pthread `pkg-config --cflags grpc`\
              `pkg-config fuse3 --cflags --libs`
-CXXFLAGS += -std=c++11 -g
+CXXFLAGS += -std=c++11 -g -pedantic -Wall
 ifeq ($(SYSTEM),Darwin)
 LDFLAGS += -L/usr/local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc`\
             `pkg-config fuse3 --cflags --libs`\
@@ -30,7 +30,7 @@ else
 LDFLAGS += -L/usr/local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc`\
 		    `pkg-config fuse3 --cflags --libs`\
            -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed\
-           -ldl -std=c++11
+           -ldl -std=c++11 -lprotobuf
 endif
 MKDIR_P = mkdir -p
 PROTOC = protoc
@@ -46,14 +46,14 @@ vpath %.proto $(PROTOS_PATH)
 
 .PHONY: directories googlerpc
 
-all: directories system-check $(BIN_PATH)/Client $(BIN_PATH)/Server #$(BIN_PATH)/HelloClient $(BIN_PATH)/HelloServer 
+all: directories system-check $(BIN_PATH)/Client $(BIN_PATH)/Server $(BIN_PATH)/HelloClient $(BIN_PATH)/HelloServer 
 
 directories: bin_dir build_dir
 
 #googlerpc: $(BUILD_PATH)/GRPC.grpc.pb.cc $(BUILD_PATH)/GRPC.pb.cc $(BUILD_PATH)/GeneralHelpers.o $(BUILD_PATH)/GrpcClient.o
 
 $(BIN_PATH)/Client: $(BUILD_PATH)/GRPC.pb.o $(BUILD_PATH)/GRPC.grpc.pb.o $(BUILD_PATH)/GeneralHelpers.o $(BUILD_PATH)/GrpcClient.o $(BUILD_PATH)/Client.o
-	$(CXX) $^ $(LDFLAGS) -o $@
+	$(CXX) $^ -o $@ $(LDFLAGS) 
 
 $(BUILD_PATH)/Client.o: $(SOURCE_PATH)/client/Client.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS)  -c -o $(BUILD_PATH)/Client.o $(SOURCE_PATH)/client/Client.cpp

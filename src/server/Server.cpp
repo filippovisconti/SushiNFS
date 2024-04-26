@@ -4,7 +4,11 @@ int main(int argc, char** argv) {
   std::string server_address("0.0.0.0:50051");
   GrpcServiceImpl service;
 
-  if(argc > 0){
+  for (int i = 0; i < argc; i++)
+    std::cout << "argument" << argv[i] << std::endl;
+
+  
+  if(argc > 1){
     std::string location(argv[1]);
     service.setMountLocation(location);
   }
