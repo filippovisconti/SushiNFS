@@ -29,6 +29,7 @@
 #else
 #include "build/HelloWorld.grpc.pb.h"
 #endif
+#include <grpc_usb.h>
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -82,17 +83,15 @@ int main(int argc, char **argv)
 	// localhost at port 50051). We indicate that the channel isn't authenticated
 	// (use of InsecureChannelCredentials()).
 	// GreeterClient greeter(grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials()));
-	int socketFd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
-	struct sockaddr_in address;
-	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = INADDR_ANY;
-	address.sin_port = htons(50051);
-	int st = connect(socketFd, (struct sockaddr *)&address, sizeof(address));
-	std::cout << "st " << st << std::endl;
-	GreeterClient greeter(grpc::CreateInsecureChannelFromFd("localhost", socketFd));
+	const char target[]= "test_channel";
+	int VID = 0x1234; // Replace with VID
+	int PID = 0x5678; // Replace with PID
+	grpc_channel* usb_client_channel = grpc_insecure_channel_create_from_usb(target, VID, PID, nullptr);
+	GreeterClient greeter(grpc::Channel(usb_client_channel));
 	std::string user("world");
 	std::string reply = greeter.SayHello(user);
 	std::cout << "Greeter received: " << reply << std::endl;
 
 	return 0;
 }
+

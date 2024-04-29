@@ -21,6 +21,7 @@
 #include <string>
 
 #include <grpc++/grpc++.h>
+#include <grpc/grpc_usb.h>
 
 #ifdef BAZEL_BUILD
 #include "examples/protos/helloworld.grpc.pb.h"
@@ -36,6 +37,7 @@ using grpc::Status;
 using helloworld::HelloRequest;
 using helloworld::HelloReply;
 using helloworld::Greeter;
+#include <grpcpp/grpcpp.h>
 
 // Logic and data behind the server's behavior.
 class GreeterServiceImpl final : public Greeter::Service {
@@ -51,25 +53,43 @@ void RunServer()
 {
 	// std::string server_address("0.0.0.0:50051");
 	GreeterServiceImpl service;
+	int VID = 0x1234; // Replace with VID
+	int PID = 0x5678; // Replace with PID
 
 	ServerBuilder builder;
-	// Listen on the given address without any authentication mechanism.
 	// builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-	// Register "service" as the instance through which we'll communicate with
-	// clients. In this case it corresponds to an *synchronous* service.
-	builder.RegisterService(&service);
-	// Finally assemble the server.
 	std::unique_ptr<Server> server(builder.BuildAndStart());
+	grpc_completion_queue *cq = grpc_completion_queue_create_for_next(nullptr);
+	grpc_server_register_completion_queue(server->c_server(), cq, nullptr);
+	grpc_channel *channel = grpc_server_add_insecure_channel_from_usb(
+		server->c_server(), nullptr, VID, PID); // Replace with your VID and PID
 
 	// std::cout << "Server listening on " << server_address << std::endl;
-	int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
-	grpc::AddInsecureChannelFromFd(server.get(), fd);
 	std::cout << std::endl;
-	std::cout << "Server listening on socket " << fd << std::endl;
 
 	// Wait for the server to shutdown. Note that some other thread must be
 	// responsible for shutting down the server for this call to ever return.
-	server->Wait();
+	// server->Wait();
+	GPR_ASSERT(channel != nullptr);
+	builder.RegisterService(&service);
+
+	std::cout << "Server started..." << std::endl;
+	grpc_completion_queue *cq2;
+	// Handle a maximum of 10 requests
+	int num_requests_handled = 0;
+	while (num_requests_handled < 10) {
+		grpc_event event;
+		grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), &event);
+		// Handle events if needed
+
+		// Increment the counter for each request handled
+		num_requests_handled++;
+	}
+
+	// Shutdown the server
+	grpc_server_shutdown_and_notify(server->c_server(), cq, nullptr);
+	grpc_server_destroy(server->c_server());
+	grpc_completion_queue_destroy(cq);
 	std::cout << "Server shutdown" << std::endl;
 }
 
