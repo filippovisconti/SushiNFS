@@ -29,7 +29,8 @@
 #else
 #include "build/HelloWorld.grpc.pb.h"
 #endif
-#include <grpc_usb.h>
+#include <grpc/grpc_usb.h>
+#include <grpcpp/channel.h>
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -87,7 +88,10 @@ int main(int argc, char **argv)
 	int VID = 0x1234; // Replace with VID
 	int PID = 0x5678; // Replace with PID
 	grpc_channel* usb_client_channel = grpc_insecure_channel_create_from_usb(target, VID, PID, nullptr);
-	GreeterClient greeter(grpc::Channel(usb_client_channel));
+	std::shared_ptr<Channel> ch = grpc::CreateChannelInternal(
+		"usb", usb_client_channel,
+		std::vector<std::unique_ptr<grpc::experimental::ClientInterceptorFactoryInterface> >());
+	GreeterClient greeter(ch);
 	std::string user("world");
 	std::string reply = greeter.SayHello(user);
 	std::cout << "Greeter received: " << reply << std::endl;

@@ -20,17 +20,17 @@ GRPCSOURCEPATH = ${GRPC_SOURCE}
 CXX = g++
 CPPFLAGS += -I$(GRPCSOURCEPATH)third_party/protobuf/src -I$(GRPCSOURCEPATH)include -I. -pthread `pkg-config --cflags grpc`\
              `pkg-config fuse3 --cflags --libs`
-CXXFLAGS += -std=c++11 -g -pedantic -Wall
+CXXFLAGS += -std=c++11 -g -pedantic -Wall -lusb
 ifeq ($(SYSTEM),Darwin)
 LDFLAGS += -L/usr/local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc`\
             `pkg-config fuse3 --cflags --libs`\
            -lgrpc++_reflection\
-           -ldl
+           -ldl -lusb-1.0
 else
 LDFLAGS += -L/usr/local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc`\
 		    `pkg-config fuse3 --cflags --libs`\
            -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed\
-           -ldl -std=c++11 -lprotobuf
+           -ldl -std=c++11 -lprotobuf -lusb-1.0
 endif
 MKDIR_P = mkdir -p
 PROTOC = protoc

@@ -74,7 +74,6 @@ void RunServer()
 	builder.RegisterService(&service);
 
 	std::cout << "Server started..." << std::endl;
-	grpc_completion_queue *cq2;
 	// Handle a maximum of 10 requests
 	int num_requests_handled = 0;
 	while (num_requests_handled < 10) {
