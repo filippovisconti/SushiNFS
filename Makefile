@@ -27,7 +27,7 @@ LDFLAGS += -L/usr/local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --l
            -lgrpc++_reflection\
            -ldl -lusb-1.0
 else
-LDFLAGS += -L/usr/local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc`\
+LDFLAGS += -L/usr/local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc `\
 		    `pkg-config fuse3 --cflags --libs`\
            -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed\
            -ldl -std=c++11 -lprotobuf -lusb-1.0

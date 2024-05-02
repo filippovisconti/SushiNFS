@@ -21,8 +21,8 @@ int main(int argc, char **argv)
 	builder.RegisterService(&service);
 	// Finally assemble the server.
 	std::unique_ptr<Server> server(builder.BuildAndStart());
-	int vid = 0x1d6b;
-	int pid = 0x0003;
+	// int vid = 0x1d6b;
+	// int pid = 0x0003;
 
 	// grpc::AddInsecureChannelFromUsb(server.get(), vid, pid);
 	std::cout << "Server listening on " << server_address << std::endl;
