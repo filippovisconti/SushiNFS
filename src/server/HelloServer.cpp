@@ -54,9 +54,8 @@ void RunServer()
 {
 	// std::string server_address("0.0.0.0:50051");
 	GreeterServiceImpl service;
-	int VID = 0x1d6b; // Replace with VID
-	int PID = 0x0002; // Replace with PID
-
+	int VID = 0x0525; // Replace with VID
+	int PID = 0xa4a0; // Replace with PID
 	grpc_init();
 	ServerBuilder builder;
 	// builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
