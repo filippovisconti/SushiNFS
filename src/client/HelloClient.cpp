@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 	// (use of InsecureChannelCredentials()).
 	// GreeterClient greeter(grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials()));
 	const char target[]= "test_channel";
-	int VID = 0x0525; // Replace with VID
+  	int VID = 0x0525; // Replace with VID
 	int PID = 0xa4a0; // Replace with PID
 	grpc_init();
 	grpc_channel* usb_client_channel = grpc_insecure_channel_create_from_usb(target, VID, PID, nullptr);

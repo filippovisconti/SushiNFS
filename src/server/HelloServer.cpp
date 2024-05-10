@@ -64,6 +64,7 @@ void RunServer()
 	GPR_ASSERT(server != nullptr);
 
 	grpc_completion_queue *cq = grpc_completion_queue_create_for_next(nullptr);
+	GPR_ASSERT(cq != nullptr);
 	// Create a dummy event to be processed
 	grpc_event dummy_event;
 	dummy_event.type = GRPC_OP_COMPLETE;
@@ -74,7 +75,7 @@ void RunServer()
 	grpc_server_register_completion_queue(server->c_server(), cq, nullptr);
 	std::cout << "Completion queue registered" << std::endl;
 	grpc_channel *channel = grpc_server_add_insecure_channel_from_usb(
-		server->c_server(), nullptr, VID, PID); // Replace with your VID and PID
+		server->c_server(), (void *)0x12341241251, VID, PID); // Replace with your VID and PID
 	GPR_ASSERT(channel != nullptr);
 	std::cout << "Channel created" << std::endl;
 	// std::cout << "Server listening on " << server_address << std::endl;
@@ -85,11 +86,13 @@ void RunServer()
 	while (num_requests_handled < 10) {
 		std::cout << "Waiting for requests..." << std::endl;
 		grpc_event event;
-		grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), &event);
+		event = grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), nullptr);
 		// Handle events if needed:
-
-		// Increment the counter for each request handled
-		num_requests_handled++;
+		if (event.type == GRPC_OP_COMPLETE) {
+			// Handle the completion event here (if needed)
+			// Increment the counter for each request handled
+			num_requests_handled++;
+		}
 	}
 	server->Wait();
 
@@ -106,3 +109,4 @@ int main(int argc, char **argv)
 
 	return 0;
 }
+
