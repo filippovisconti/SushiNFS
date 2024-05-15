@@ -50,10 +50,12 @@ class GreeterServiceImpl final : public Greeter::Service {
 	}
 };
 
-void RunServer(int VID=0x0525 , int PID = 0xa4a0)
+void RunServer()
 {
 	// std::string server_address("0.0.0.0:50051");
 	GreeterServiceImpl service;
+	int VID = 0x0525; // Replace with VID
+	int PID = 0xa4a0; // Replace with PID
 	grpc_init();
 	ServerBuilder builder;
 	// builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
@@ -62,25 +64,32 @@ void RunServer(int VID=0x0525 , int PID = 0xa4a0)
 	GPR_ASSERT(server != nullptr);
 
 	grpc_completion_queue *cq = grpc_completion_queue_create_for_next(nullptr);
-	GPR_ASSERT(cq != nullptr);
-
+	// Create a dummy event to be processed
+	grpc_event dummy_event;
+	dummy_event.type = GRPC_OP_COMPLETE;
+	dummy_event.tag = nullptr;
+	dummy_event.success = true;
+	// grpc_event event = grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), nullptr);
+	// std::cout << "Dummy event processed" << std::endl;
 	grpc_server_register_completion_queue(server->c_server(), cq, nullptr);
 	std::cout << "Completion queue registered" << std::endl;
 	grpc_channel *channel = grpc_server_add_insecure_channel_from_usb(
-		server->c_server(), (void *)0x12341241251, VID, PID); // Replace with your VID and PID
+		server->c_server(), nullptr, VID, PID); // Replace with your VID and PID
 	GPR_ASSERT(channel != nullptr);
 	std::cout << "Channel created" << std::endl;
+	// std::cout << "Server listening on " << server_address << std::endl;
 
 	std::cout << "Server started..." << std::endl;
+	// Handle a maximum of 10 requests
 	int num_requests_handled = 0;
 	while (num_requests_handled < 10) {
 		std::cout << "Waiting for requests..." << std::endl;
 		grpc_event event;
-		event = grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), nullptr);
+		grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), &event);
+		// Handle events if needed:
 
-		if (event.type == GRPC_OP_COMPLETE) {
-			num_requests_handled++;
-		}
+		// Increment the counter for each request handled
+		num_requests_handled++;
 	}
 	server->Wait();
 
@@ -93,15 +102,7 @@ void RunServer(int VID=0x0525 , int PID = 0xa4a0)
 
 int main(int argc, char **argv)
 {
-	// get the VID and PID from the command line
-	if (argc < 3) {
-		std::cerr << "Usage: " << argv[0] << " <VID> <PID>" << std::endl;
-		return 1;
-	}
-	int VID = int(strtol(argv[1], NULL, 16));
-	int PID = int(strtol(argv[2], NULL, 16));
-	std::cout << "VID: " << VID << ", PID: " << PID << std::endl;
-	RunServer(VID, PID);
+	RunServer();
 
 	return 0;
 }

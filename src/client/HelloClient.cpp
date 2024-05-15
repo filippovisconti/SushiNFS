@@ -18,10 +18,13 @@
 
 #include <iostream>
 #include <memory>
+#include <thread>
 #include <string>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
+#include <fcntl.h> /* For O_RDWR */
+#include <unistd.h> /* For open(), creat() */
+#include <linux/usb/ch9.h>
 #include <grpc++/grpc++.h>
 
 #ifdef BAZEL_BUILD
@@ -31,7 +34,10 @@
 #endif
 #include <grpc/grpc_usb.h>
 #include <grpcpp/channel.h>
-
+#include <grpcpp/create_channel_posix.h>
+extern "C" {
+#include "gadget.h"
+}
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
@@ -60,15 +66,24 @@ class GreeterClient {
 		// Context for the client. It could be used to convey extra information to
 		// the server and/or tweak certain RPC behaviors.
 		ClientContext context;
+		std::cout << "context" << std::endl;
 
 		// The actual RPC.
-		Status status = stub_->SayHello(&context, request, &reply);
+		try {
+			Status status = stub_->SayHello(&context, request, &reply);
+			std::cout << "status" << std::endl;
+			// Act upon its status.
+			if (status.ok()) {
+				std::cout << "ok" << std::endl;
+				return reply.message();
+			} else {
+				std::cout << status.error_code() << ": " << status.error_message()
+					  << std::endl;
+				return "RPC failed";
+			}
 
-		// Act upon its status.
-		if (status.ok()) {
-			return reply.message();
-		} else {
-			std::cout << status.error_code() << ": " << status.error_message() << std::endl;
+		} catch (const std::exception &e) {
+			std::cerr << e.what() << '\n';
 			return "RPC failed";
 		}
 	}
@@ -79,23 +94,44 @@ class GreeterClient {
 
 int main(int argc, char **argv)
 {
-	// Instantiate the client. It requires a channel, out of which the actual RPCs
-	// are created. This channel models a connection to an endpoint (in this case,
-	// localhost at port 50051). We indicate that the channel isn't authenticated
-	// (use of InsecureChannelCredentials()).
-	// GreeterClient greeter(grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials()));
-	const char target[]= "test_channel";
-  	int VID = 0x0525; // Replace with VID
-	int PID = 0xa4a0; // Replace with PID
+	if (argc < 3) {
+		std::cerr << "Usage: " << argv[0] << " <VID> <PID>" << std::endl;
+		return 1;
+	}
+	int VID = int(strtol(argv[1], NULL, 16));
+	int PID = int(strtol(argv[2], NULL, 16));
+	std::cout << "VID: " << VID << ", PID: " << PID << std::endl;
 	grpc_init();
-	grpc_channel* usb_client_channel = grpc_insecure_channel_create_from_usb(target, VID, PID, nullptr);
-	std::shared_ptr<Channel> ch = grpc::CreateChannelInternal(
-		"usb", usb_client_channel,
-		std::vector<std::unique_ptr<grpc::experimental::ClientInterceptorFactoryInterface> >());
-	GreeterClient greeter(ch);
+
+	const char target[] = "usb-client";
+	int fd = usb_raw_open();
+	const char *device = "1000480000.usb";
+	const char *driver = "1000480000.usb";
+	usb_raw_init(fd, USB_SPEED_HIGH, driver, device);
+	usb_raw_run(fd);
+
+	// grpc_channel *usb_client_channel = grpc_insecure_channel_create_from_usb(target, VID, PID, nullptr);
+	std::shared_ptr<grpc::Channel> fd_channel = grpc::CreateInsecureChannelFromFd(target, fd);
+	GPR_ASSERT(fd_channel != nullptr);
+	std::cout << "USB channel created" << std::endl;
+	// run ep0_loop in a separate thread
+	std::thread ep0_thread(ep0_loop, fd);
+	ep0_thread.detach();
+	std::cout << "USB raw open" << fd << std::endl;
+	// GPR_ASSERT(usb_client_channel != nullptr);
+
+	// std::shared_ptr<Channel> ch = grpc::CreateChannelInternal(
+	// 	"usb-client", usb_client_channel,
+	// 	std::vector<std::unique_ptr<grpc::experimental::ClientInterceptorFactoryInterface> >());
+	std::cout << "Internal channel created" << std::endl;
+	GreeterClient greeter(fd_channel);
+
+	std::cout << "Greeter client created" << std::endl;
+
 	std::string user("world");
 	std::string reply = greeter.SayHello(user);
 	std::cout << "Greeter received: " << reply << std::endl;
-
+	ep0_thread.join();
+	close(fd);
 	return 0;
 }

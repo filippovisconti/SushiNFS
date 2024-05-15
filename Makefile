@@ -20,14 +20,14 @@ GRPCSOURCEPATH = ${GRPC_SOURCE}
 CXX = g++
 CPPFLAGS += -I$(GRPCSOURCEPATH)third_party/protobuf/src -I$(GRPCSOURCEPATH)include -I. -pthread `pkg-config --cflags grpc`\
              `pkg-config fuse3 --cflags --libs`
-CXXFLAGS += -std=c++11 -g -pedantic -Wall -lusb
+CXXFLAGS += -g -lusb
 ifeq ($(SYSTEM),Darwin)
-LDFLAGS += -L/usr/local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc`\
+LDFLAGS += -L/home/filippo/.local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc`\
             `pkg-config fuse3 --cflags --libs`\
            -lgrpc++_reflection\
            -ldl -lusb-1.0
 else
-LDFLAGS += -L/usr/local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc `\
+LDFLAGS += -L/home/filippo/.local/lib -L$(GRPCSOURCEPATH)libs/opt/protobuf `pkg-config --libs grpc++ grpc `\
 		    `pkg-config fuse3 --cflags --libs`\
            -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed\
            -ldl -std=c++11 -lprotobuf -lusb-1.0
@@ -46,14 +46,14 @@ vpath %.proto $(PROTOS_PATH)
 
 .PHONY: directories googlerpc
 
-all: directories system-check $(BIN_PATH)/Client $(BIN_PATH)/Server $(BIN_PATH)/HelloClient $(BIN_PATH)/HelloServer 
+all: directories system-check $(BIN_PATH)/Client $(BIN_PATH)/Server $(BIN_PATH)/HelloClient $(BIN_PATH)/HelloServer
 
 directories: bin_dir build_dir
 
 #googlerpc: $(BUILD_PATH)/GRPC.grpc.pb.cc $(BUILD_PATH)/GRPC.pb.cc $(BUILD_PATH)/GeneralHelpers.o $(BUILD_PATH)/GrpcClient.o
 
 $(BIN_PATH)/Client: $(BUILD_PATH)/GRPC.pb.o $(BUILD_PATH)/GRPC.grpc.pb.o $(BUILD_PATH)/GeneralHelpers.o $(BUILD_PATH)/GrpcClient.o $(BUILD_PATH)/Client.o
-	$(CXX) $^ -o $@ $(LDFLAGS) 
+	$(CXX) $^ -o $@ $(LDFLAGS)
 
 $(BUILD_PATH)/Client.o: $(SOURCE_PATH)/client/Client.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS)  -c -o $(BUILD_PATH)/Client.o $(SOURCE_PATH)/client/Client.cpp
@@ -73,11 +73,14 @@ $(BUILD_PATH)/GrpcClient.o: $(SOURCE_PATH)/client/GrpcClient.cpp $(SOURCE_PATH)/
 $(BUILD_PATH)/GrpcServer.o: $(SOURCE_PATH)/server/GrpcServer.cpp $(SOURCE_PATH)/server/GrpcServer.h $(BUILD_PATH)/GRPC.grpc.pb.cc $(BUILD_PATH)/GRPC.pb.cc
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $(BUILD_PATH)/GrpcServer.o $(SOURCE_PATH)/server/GrpcServer.cpp
 
-$(BIN_PATH)/HelloClient: $(BUILD_PATH)/HelloWorld.pb.o $(BUILD_PATH)/HelloWorld.grpc.pb.o $(BUILD_PATH)/HelloClient.o
+$(BIN_PATH)/HelloClient: $(BUILD_PATH)/HelloWorld.pb.o $(BUILD_PATH)/HelloWorld.grpc.pb.o $(BUILD_PATH)/HelloClient.o $(BUILD_PATH)/gadget.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 $(BIN_PATH)/HelloServer: $(BUILD_PATH)/HelloWorld.pb.o $(BUILD_PATH)/HelloWorld.grpc.pb.o $(BUILD_PATH)/HelloServer.o
 	$(CXX) $^ $(LDFLAGS) -o $@
+
+$(BUILD_PATH)/gadget.o: $(SOURCE_PATH)/client/gadget.c  $(SOURCE_PATH)/client/gadget.h
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $(BUILD_PATH)/gadget.o -x c $(SOURCE_PATH)/client/gadget.c
 
 $(BUILD_PATH)/HelloClient.o: $(SOURCE_PATH)/client/HelloClient.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS)  -c -o $(BUILD_PATH)/HelloClient.o $(SOURCE_PATH)/client/HelloClient.cpp
@@ -154,7 +157,7 @@ ifneq ($(SYSTEM_OK),true)
 endif
 ifeq ($(GRPC_SOURCE),)
 	@echo " DEPENDENCY ERROR"
-	@echo 
+	@echo
 	@echo "Please set the environment variable GRPC_SOURCE to built grpc source"
 	@echo "directory."
 	@echo
